@@ -87,6 +87,7 @@ public:
         uint16_t dmaPixelSize = c_dmaBytesPerPixelBytes * elementSize;
         uint16_t resetSize = (c_dmaBytesPer50us * T_SPEED::ResetTimeUs / 50 / T_SPEED::I2sSampleRateDiv);
 
+        _pixelCount = pixelCount;
         _pixelsSize = pixelCount * elementSize;
         _i2sBufferSize = pixelCount * dmaPixelSize + resetSize;
 
@@ -154,6 +155,7 @@ public:
 private:
     const uint8_t _pin;            // output pin number
 
+    uint16_t  _pixelCount;
     size_t    _pixelsSize;    // Size of '_pixels' buffer 
     uint8_t*  _pixels;        // Holds LED color values
 
@@ -172,10 +174,20 @@ private:
 
         uint16_t* pDma = (uint16_t*)_i2sBuffer;
         uint8_t* pPixelsEnd = _pixels + _pixelsSize;
-        for (uint8_t* pPixel = _pixels; pPixel < pPixelsEnd; pPixel++)
+        uint16_t pixelIndex = 0;
+        for (uint8_t* pPixel = _pixels; pPixel < pPixelsEnd; pPixel++, pixelIndex++)
         {
-            *(pDma++) = bitpatterns[((*pPixel) & 0x0f)];
-            *(pDma++) = bitpatterns[((*pPixel) >> 4) & 0x0f];
+        	// Skip W for all RGB NeoPixels
+        	// TODO: currently assuming half RGBW & RGB - need more general solution
+#if 0
+            if ((pixelIndex > (_pixelCount << 1)) && ((pixelIndex & 0x03) == 0x03)) {
+            } else {
+#else
+        	if ((pixelIndex < (_pixelCount << 1)) || ((pixelIndex & 0x03) != 0x03)) {
+#endif
+            	*(pDma++) = bitpatterns[((*pPixel) & 0x0f)];
+            	*(pDma++) = bitpatterns[((*pPixel) >> 4) & 0x0f];
+            }
         }
     }
 };
